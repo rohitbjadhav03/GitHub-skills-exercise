@@ -46,4 +46,40 @@ router.post('/workouts', async (req, res) => {
   res.status(201).json(workout);
 });
 
+router.get('/leaderboard', async (_req, res) => {
+  const leaderboard = await Activity.aggregate([
+    {
+      $group: {
+        _id: '$user',
+        totalCalories: { $sum: '$caloriesBurned' },
+        totalDuration: { $sum: '$durationMinutes' },
+        activities: { $sum: 1 }
+      }
+    },
+    { $sort: { totalCalories: -1, totalDuration: -1 } },
+    {
+      $lookup: {
+        from: 'users',
+        localField: '_id',
+        foreignField: '_id',
+        as: 'user'
+      }
+    },
+    { $unwind: '$user' },
+    {
+      $project: {
+        _id: 0,
+        userId: '$_id',
+        username: '$user.username',
+        displayName: '$user.profile.displayName',
+        totalCalories: 1,
+        totalDuration: 1,
+        activities: 1
+      }
+    }
+  ]);
+
+  res.json(leaderboard);
+});
+
 export default router;
